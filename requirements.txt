@@ -7,3 +7,6 @@ tqdm
 lightfm
 scikit-learn
 requests
+google-genai
+pydantic
+tenacity

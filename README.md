@@ -42,6 +42,40 @@ Run the following scripts in order. All outputs go to `outputs/{run_id}/`.
    python scripts/smoke_test_step1.py
    ```
 
+## Step 2 Usage (PCN-Rec)
+
+1. **Set API Key**
+   ```bash
+   export GEMINI_API_KEY=your_key_here
+   # Or on Windows PowerShell:
+   # $env:GEMINI_API_KEY="your_key_here"
+   ```
+
+2. **Run Single LLM Baseline**
+   ```bash
+   python scripts/step2_run_single_llm_baseline.py --config config/config.yaml --run_id exp1 --max_users 200
+   ```
+
+3. **Run PCN-Rec (Negotiation + Verifier)**
+   ```bash
+   python scripts/step2_run_pcnrec.py --config config/config.yaml --run_id exp1 --max_users 200
+   ```
+
+4. **Run Ablations**
+   ```bash
+   python scripts/step2_run_ablations.py --config config/config.yaml --run_id exp1 --max_users 200
+   ```
+
+5. **Evaluate**
+   ```bash
+   python scripts/step2_evaluate.py --config config/config.yaml --run_id exp1 --methods single_llm,pcnrec,pcnrec_no_verifier,pcnrec_no_negotiation
+   ```
+
+6. **Smoke Test Step 2**
+   ```bash
+   python scripts/smoke_test_step2.py
+   ```
+
 ## Colab Usage
 The scripts are designed to be runnable on Google Colab.
 For large runs, ensure you have the `outputs` directory mounted or saved periodically.
