@@ -1,0 +1,28 @@
+dataset:
+  name: "movielens"
+  variant: "ml-100k"        # or "ml-1m"
+  data_dir: "data_cache/movielens"
+  output_dir: "outputs"
+  min_user_interactions: 20
+  test_ratio: 0.2           # time-aware: last 20% per user
+
+popularity:
+  head_quantile: 0.9        # head = top 10% most popular
+  torso_quantile: 0.6       # torso = 60–90%
+
+candidates:
+  model: "lightfm"          # or "implicit"
+  loss: "warp"              # if lightfm
+  factors: 64
+  epochs: 15
+  learning_rate: 0.05
+  top_k: 100
+  num_threads: 4
+  seed: 42
+
+mmr:
+  lambda: 0.7               # trade-off relevance vs diversity
+  top_n: 10
+
+run:
+  run_id: null
