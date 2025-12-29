@@ -11,7 +11,7 @@ def main():
     args = parser.parse_args()
     
     # Ablation 1: No Verifier
-    cmd1 = f"python scripts/step2_run_pcnrec.py --config {args.config} --run_id {args.run_id} --method_name pcnrec_no_verifier --no_verifier"
+    cmd1 = f"{sys.executable} scripts/step2_run_pcnrec.py --config {args.config} --run_id {args.run_id} --method_name pcnrec_no_verifier --no_verifier"
     if args.max_users:
         cmd1 += f" --max_users {args.max_users}"
         
@@ -19,7 +19,7 @@ def main():
     subprocess.call(cmd1, shell=True)
     
     # Ablation 2: No Negotiation
-    cmd2 = f"python scripts/step2_run_pcnrec.py --config {args.config} --run_id {args.run_id} --method_name pcnrec_no_negotiation --no_negotiation"
+    cmd2 = f"{sys.executable} scripts/step2_run_pcnrec.py --config {args.config} --run_id {args.run_id} --method_name pcnrec_no_negotiation --no_negotiation"
     if args.max_users:
         cmd2 += f" --max_users {args.max_users}"
         

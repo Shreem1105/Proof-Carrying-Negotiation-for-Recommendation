@@ -1,0 +1,1 @@
+Figure 1: Feasibility Analysis. The percentage of users for whom a valid slate satisfying all constraints exists within the top-W candidates. We select W=80 to balance feasibility (~58%) with candidate relevance. Tail shortage is the primary bottleneck at lower W.

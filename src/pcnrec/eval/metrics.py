@@ -1,7 +1,7 @@
 import numpy as np
 
 def dcg_at_k(r, k):
-    r = np.asfarray(r)[:k]
+    r = np.asarray(r).astype(float)[:k]
     if r.size:
         return np.sum(r / np.log2(np.arange(2, r.size + 2)))
     return 0.

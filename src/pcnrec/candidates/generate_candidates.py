@@ -38,7 +38,9 @@ def generate_candidates(model, train_df, num_users, num_items, top_k, num_thread
         # To score all items for one user: model.predict(user_id, np.arange(num_items))
         
         for user_id in batch_users:
-            scores = model.predict(user_id, all_items, num_threads=1) # threading per user call might be overhead, keep outer parallelism if needed
+            # LightFM expects user_ids and item_ids to be same length arrays
+            user_ids_repeated = np.full(len(all_items), user_id, dtype=np.int32)
+            scores = model.predict(user_ids_repeated, all_items, num_threads=1)
             
             # Mask seen items
             if user_id in seen_items:
@@ -73,7 +75,7 @@ def generate_candidates(model, train_df, num_users, num_items, top_k, num_thread
         # items_df columns: original_id, internal_id, title, genres, popularity_count, popularity_bin
         
         # Create a lookup
-        items_info = items_df.set_index('internal_id')[['original_id', 'popularity_count', 'popularity_bin']]
+        items_info = items_df.set_index('internal_id')[['original_id', 'title', 'genres', 'popularity_count', 'popularity_bin']]
         
         results_df = results_df.join(items_info, on='item_idx')
         

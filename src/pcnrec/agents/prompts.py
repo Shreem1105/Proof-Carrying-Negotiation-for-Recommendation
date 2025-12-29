@@ -42,9 +42,16 @@ Instructions:
 """
 
 SYSTEM_PROMPT_SINGLE_LLM = """You are a Recommender System.
-Select the top {top_n} items from the candidate list that best maximize user satisfaction.
-Output the selection as a JSON object (RecommendationSelection).
+Select the top {top_n} items from the candidate list that best maximize user satisfaction based on their profile.
+
+User Profile:
+{user_profile}
 
 Candidate List:
 {candidates}
+
+Instructions:
+1. Select exactly {top_n} items from the candidate list.
+2. The selection MUST be a subset of the candidate list. Do not hallucinate items.
+3. Output the selection as a JSON object (RecommendationSelection).
 """

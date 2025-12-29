@@ -29,7 +29,7 @@ class GeminiClient:
         return retry(
             stop=stop_after_attempt(self.max_retries),
             wait=wait_exponential(multiplier=1, min=2, max=10),
-            retry_if_exception_type=(Exception), # Broad retry for transient API issues, refine if needed
+            retry=retry_if_exception_type(Exception), # Broad retry for transient API issues, refine if needed
             reraise=True
         )
 
@@ -65,12 +65,30 @@ class GeminiClient:
         """
         @self._retry_decorator
         def _call_api():
+            # Generate and sanitize schema manually to remove additionalProperties
+            try:
+                schema = schema_model.model_json_schema()
+            except AttributeError:
+                # Fallback for Pydantic V1 or other types
+                schema = schema_model.schema()
+
+            def sanitize(s):
+                if isinstance(s, dict):
+                    s.pop('additionalProperties', None)
+                    for k, v in s.items():
+                        if isinstance(v, (dict, list)):
+                            sanitize(v)
+                        if k == 'items' and isinstance(v, dict):
+                            sanitize(v)
+            
+            sanitize(schema)
+
             config = types.GenerateContentConfig(
                 temperature=self.temperature,
                 max_output_tokens=self.max_tokens,
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
-                response_schema=schema_model
+                response_schema=schema
             )
             
             response = self.client.models.generate_content(
@@ -85,13 +103,11 @@ class GeminiClient:
             # In latest google-genai, response.parsed is available if schema is passed.
             
             if hasattr(response, 'parsed') and response.parsed is not None:
+                if isinstance(response.parsed, dict):
+                    return schema_model(**response.parsed)
                 return response.parsed
             else:
                 # Fallback: parse text manually if SDK didn't auto-parse to instance
-                # This happens if response_schema is passed as JSON schema dict instead of class
-                # But we passed class.
-                # However, for robustness let's try assuming it works.
-                # If not, let's look at text.
                 import json
                 try:
                     data = json.loads(response.text)

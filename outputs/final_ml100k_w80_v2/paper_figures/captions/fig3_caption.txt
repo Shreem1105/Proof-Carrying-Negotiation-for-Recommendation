@@ -1,0 +1,1 @@
+Figure 3: PCN-Rec System Architecture. The system uses a negotiation between a User Advocate and Policy Agent, mediated by an LLM to produce a slate and a 'proof certificate'. A deterministic code-based verifier checks the certificate against constraints. If verification fails, a deterministic repair mechanism (Constrained Greedy) ensures compliance.

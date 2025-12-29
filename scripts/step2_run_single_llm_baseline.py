@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--config", default="config/config.yaml")
     parser.add_argument("--run_id", required=True)
     parser.add_argument("--max_users", type=int, default=None)
+    parser.add_argument("--shard", type=str, default=None, help="Format: index/total, e.g., 0/4")
     args = parser.parse_args()
     
     config = load_config(args.config)
@@ -37,6 +38,19 @@ def main():
         sys.exit(1)
         
     candidates_df = load_parquet(cand_path)
+    
+    # Load items and train for profile
+    data_dir = os.path.join(output_dir, "data")
+    items_path = os.path.join(data_dir, "items.parquet")
+    train_path = os.path.join(data_dir, "interactions_train.parquet")
+    
+    items_df = load_parquet(items_path)
+    train_df = load_parquet(train_path)
+    
+    # Ensure indices
+    if items_df.index.name != 'item_idx' and 'item_idx' not in items_df.columns:
+        # Assuming index is item_idx if not column
+        pass
     
     # Initialize
     set_seed(42)
@@ -56,33 +70,49 @@ def main():
     logger.info(f"Already done: {len(done_users)} users.")
     
     # Filter users
-    all_users = candidates_df['user_idx'].unique()
+    all_users = sorted(candidates_df['user_idx'].unique())
     if args.max_users:
         all_users = all_users[:args.max_users]
+        
+    # Sharding
+    if args.shard:
+        shard_idx, shard_total = map(int, args.shard.split('/'))
+        chunk_size = len(all_users) // shard_total + 1
+        start_idx = shard_idx * chunk_size
+        end_idx = min((shard_idx + 1) * chunk_size, len(all_users))
+        all_users = all_users[start_idx:end_idx]
+        logger.info(f"Shard {shard_idx+1}/{shard_total}: Processing {len(all_users)} users")
         
     users_to_process = [u for u in all_users if u not in done_users]
     logger.info(f"Processing {len(users_to_process)} users...")
     
+    # Import profile util
+    from pcnrec.utils.profiling import get_user_profile
+    
     for uid in tqdm(users_to_process):
         user_cands = candidates_df[candidates_df['user_idx'] == uid].copy()
         
+        # Verify columns exist: title, genres, popularity_bin
+        # They should be in candidates_df
+        
+        # Profile
+        profile_str = get_user_profile(uid, train_df, items_df)
+        
         start_t = time.time()
-        result = run_single_llm(uid, user_cands, config, gemini)
+        result = run_single_llm(uid, user_cands, config, gemini, user_profile=profile_str)
         end_t = time.time()
         
         row = {
             "user_id": int(uid),
             "timing_ms": {"total": (end_t - start_t) * 1000},
-            "candidates_shown": user_cands[['item_idx', 'title', 'genres', 'popularity_bin', 'cand_score']].to_dict('records')
+            "candidates_shown": user_cands[['item_idx', 'title', 'genres', 'popularity_bin', 'cand_score']].head(config['pcn']['candidate_window']).to_dict('records')
         }
         
-        if result['result'] == 'success':
-            row['selected_item_ids'] = result['selected_item_ids']
-            row['status'] = 'success'
-        else:
-            row['status'] = 'error'
+        row['selected_item_ids'] = result.get('selected_item_ids', [])
+        row['status'] = result['result']
+        row['fallback_used'] = result.get('fallback_used', False)
+        if result['result'] == 'error':
             row['error'] = result.get('error')
-            row['selected_item_ids'] = [] 
             
         append_result_row(run_output_dir, row)
         

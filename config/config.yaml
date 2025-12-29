@@ -36,7 +36,7 @@ llm:
 pcn:
   top_n: 10
   max_rounds: 2                 # negotiation rounds (keep small)
-  candidate_window: 30          # only show top-30 candidates to LLM (token control)
+  candidate_window: 80          # only show top-30 candidates to LLM (token control)
   require_verifier_pass: true   # if fail, fall back to MMR or best-effort fix
 
 constraints:

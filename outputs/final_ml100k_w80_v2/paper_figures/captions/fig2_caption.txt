@@ -1,0 +1,1 @@
+Figure 2: Governance-Utility Tradeoff. PCN-Rec achieves near-optimal pass rates (>98%) among feasible users, with only a marginal drop in utility compared to the unconstrained and single-prompt baselines. It significantly outperforms the Single LLM on compliance.

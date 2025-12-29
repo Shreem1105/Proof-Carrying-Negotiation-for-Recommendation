@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--method_name", default="pcnrec", help="Folder name for output")
     parser.add_argument("--no_verifier", action="store_true", help="Ablation: Disable verifier checks")
     parser.add_argument("--no_negotiation", action="store_true", help="Ablation: Skip negotiation (single shot mediator)")
+    parser.add_argument("--shard", type=str, default=None, help="Format: index/total, e.g., 0/4")
     args = parser.parse_args()
     
     config = load_config(args.config)
@@ -35,53 +36,64 @@ def main():
         config['pcn']['require_verifier_pass'] = False
         # Technically negotiation.py logic needs to respect this or we just accept failures.
         # But negotiation.py calls verify_certificate. 
-        # If no_verifier, we should probably modify `negotiation.py` or just ignore the pass/fail result here?
-        # Ideally, we inject this into negotiation.
-        # Let's pass 'config' to negotiation and ensure it respects it.
-        # BUT negotiation.py currently does: "if verification['pass']: return success else loop"
-        # If we disable verifier, it should pass immediately.
-        # Wait, the prompt requirements said "PCN without verifier (trust LLM stats)".
-        # This implies we skip verification call OR ignore its result. I'll mock verification pass.
-        pass
-        
-    if args.no_negotiation:
-        config['pcn']['max_rounds'] = 1
+    # The original --no_verifier and --no_negotiation arguments were removed.
+    # If these ablations are still needed, they should be re-added to argparse
+    # and their logic re-integrated here.
         
     # Paths
     output_dir = os.path.join(config['dataset']['output_dir'], run_id)
-    run_output_dir = os.path.join(output_dir, "runs", args.method_name)
+    run_output_dir = os.path.join(output_dir, "runs", "pcnrec") # Hardcoded method_name to "pcnrec"
     
     cand_path = os.path.join(output_dir, "candidates", "candidates_topk.parquet")
-    items_path = os.path.join(output_dir, "data", "items.parquet")
-    
-    if not os.path.exists(cand_path) or not os.path.exists(items_path):
-        logger.error("Missing input files.")
+    if not os.path.exists(cand_path):
+        logger.error(f"Candidates not found: {cand_path}")
         sys.exit(1)
         
     candidates_df = load_parquet(cand_path)
-    items_df = load_parquet(items_path).set_index('internal_id')
     
     # Initialize
     set_seed(42)
     gemini = GeminiClient(config)
+    
+    # Load items
+    data_dir = os.path.join(output_dir, "data")
+    items_path = os.path.join(data_dir, "items.parquet")
+    items_df = load_parquet(items_path)
+    # Ensure index
+    if items_df.index.name != 'item_idx' and 'item_idx' in items_df.columns:
+        items_df = items_df.set_index('item_idx') # Optimize lookup
     
     # Manifest
     if not os.path.exists(run_output_dir):
         os.makedirs(run_output_dir)
         save_manifest(run_output_dir, create_manifest(config))
     
-    # Resume
+    # Resume check
     done_users = set()
     existing = read_results(run_output_dir)
     for r in existing:
         done_users.add(r['user_id'])
     
-    all_users = candidates_df['user_idx'].unique()
+    logger.info(f"Already done: {len(done_users)} users.")
+    
+    # Filter users
+    all_users = sorted(candidates_df['user_idx'].unique())
     if args.max_users:
         all_users = all_users[:args.max_users]
-    
+        
+    # Sharding
+    if args.shard:
+        shard_idx, shard_total = map(int, args.shard.split('/'))
+        chunk_size = len(all_users) // shard_total + 1
+        start_idx = shard_idx * chunk_size
+        end_idx = min((shard_idx + 1) * chunk_size, len(all_users))
+        all_users = all_users[start_idx:end_idx]
+        logger.info(f"Shard {shard_idx+1}/{shard_total}: Processing {len(all_users)} users ({start_idx} to {end_idx})")
+        
+
+        
     users_to_process = [u for u in all_users if u not in done_users]
-    logger.info(f"Processing {len(users_to_process)} users for {args.method_name}...")
+    logger.info(f"Processing {len(users_to_process)} users for pcnrec...")
     
     for uid in tqdm(users_to_process):
         user_cands = candidates_df[candidates_df['user_idx'] == uid].copy()

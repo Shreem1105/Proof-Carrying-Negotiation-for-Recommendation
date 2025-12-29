@@ -8,7 +8,7 @@ def verify_certificate(certificate: ProofCertificate, items_df, candidates_shown
     Also checks that selected items are a subset of candidates_shown.
     """
     selected_ids = certificate.selected_item_ids
-    config_constraints = certificate.constraints
+    config_constraints = certificate.constraints.model_dump()
     
     reasons = []
     passed = True

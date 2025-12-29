@@ -76,6 +76,30 @@ Run the following scripts in order. All outputs go to `outputs/{run_id}/`.
    python scripts/smoke_test_step2.py
    ```
 
+## Research Validity & Analysis (Step 2 Advanced)
+
+The codebase includes tools to verify the feasibility of constraints and run robust baselines.
+
+1.  **Feasibility Report**
+    Analyzes whether constraints (Tail, Unique Genres) are satisfiable within the candidate window.
+    ```bash
+    python scripts/step2_feasibility_report.py --config config/config.yaml --run_id exp1
+    ```
+    Outputs: `outputs/exp1/analysis/feasibility.csv`
+
+2.  **Sanity Baselines** (Cheap & Fast)
+    Runs `mf_topn` (score only), `constrained_greedy` (deterministic constraint solver), and `mmr`.
+    ```bash
+    python scripts/step2_run_sanity_baselines.py --config config/config.yaml --run_id exp1
+    ```
+
+3.  **Comprehensive Evaluation**
+    Evaluates all methods and splits results by "All Users" vs "Feasible Users Only".
+    ```bash
+    python scripts/step2_evaluate.py --config config/config.yaml --run_id exp1 --methods mf_topn,constrained_greedy,single_llm,pcnrec
+    ```
+    Look for `outputs/exp1/analysis/compare_methods_feasible_only.csv` for the fairest comparison of governance capabilities.
+
 ## Colab Usage
 The scripts are designed to be runnable on Google Colab.
 For large runs, ensure you have the `outputs` directory mounted or saved periodically.
